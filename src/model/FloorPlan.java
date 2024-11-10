@@ -1,5 +1,7 @@
 package model;
 
+// a new test comment
+
 import model.item.fixture.Fixture;
 import model.item.furniture.Furniture;
 import model.opening.Door;
