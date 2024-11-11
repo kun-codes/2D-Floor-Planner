@@ -36,32 +36,6 @@ public class flor {
         });
     }
 
-    /*
-        ImageIcon image=new ImageIcon("C:\Users\AJAY\Pictures\Screenshots\holy taco report.png");
-        final int IMG_WIDTH = image.getIconWidth();
-        final int IMG_HEIGHT = image.getIconHeight();
-        Point image_corner;
-        Point previousPoint;
-
-        flor()
-        {
-            image_corner=new Point(0,0);
-            ClickListener click=new ClickListener();
-            this.addMouseListener(click);
-
-        }
-        public void paintComponent(Graphics g)
-        {
-
-        }
-        private class ClickListener extends MouseAdapter
-        {
-
-        }
-        private class DragListener extends MouseMotionAdapter
-        {
-
-        }*/
     public static void main(String args[])
     {
         JFrame frame = new JFrame("flor");
