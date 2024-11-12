@@ -69,9 +69,12 @@ public class flor {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
-        frame.setSize(960,540);
-        // Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        // frame.setBounds(100, 100, (int) dim.getWidth(), (int) dim.getHeight());
+        frame.setSize(1920,1080);
+        frame.setLocationRelativeTo(null);
+        frame.setLocation(0,0);
+        frame.setResizable(false);
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        frame.setBounds(100, 100, (int) dim.getWidth(), (int) dim.getHeight());
         frame.setLocationRelativeTo(null);
     }
 }
