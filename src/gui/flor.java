@@ -5,6 +5,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 
 public class flor {
     private JPanel rootPanel;
@@ -74,10 +76,18 @@ public class flor {
 
     private class CanvasPanel extends JPanel {
         private Point origin = new Point(0, 0);
-        private static final double SCROLL_SPEED_FACTOR = 1.0; // Reduced for smoother movement
+        private static final double SCROLL_SPEED_FACTOR = 0.3;
 
         public CanvasPanel() {
             setPreferredSize(new Dimension(2000, 2000));
+            
+            // Add component listener to handle initial layout
+            addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentShown(ComponentEvent e) {
+                    centerViewport();
+                }
+            });
 
             MouseAdapter mouseAdapter = new MouseAdapter() {
                 private Point lastDragPoint;
@@ -121,6 +131,17 @@ public class flor {
             addMouseMotionListener(mouseAdapter);
         }
 
+        private void centerViewport() {
+            if (scrollPane != null && scrollPane.getViewport() != null) {
+                JViewport viewport = scrollPane.getViewport();
+                Point center = new Point(
+                    (getWidth() - viewport.getWidth()) / 2,
+                    (getHeight() - viewport.getHeight()) / 2
+                );
+                viewport.setViewPosition(center);
+            }
+        }
+
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
@@ -158,16 +179,18 @@ public class flor {
     public static void main(String args[])
     {
         JFrame frame = new JFrame("flor");
-        frame.setContentPane(new flor().rootPanel);
+        flor florInstance = new flor();
+        frame.setContentPane(florInstance.rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
+        frame.setSize(1920, 1080);
         frame.setVisible(true);
-        frame.setSize(1920,1080);
-        frame.setLocationRelativeTo(null);
-        frame.setLocation(0,0);
-        frame.setResizable(false);
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        frame.setBounds(100, 100, (int) dim.getWidth(), (int) dim.getHeight());
-        frame.setLocationRelativeTo(null);
+        
+        // Center viewport after frame is visible
+        SwingUtilities.invokeLater(() -> {
+            if (florInstance.canvasPanel instanceof CanvasPanel) {
+                ((CanvasPanel)florInstance.canvasPanel).centerViewport();
+            }
+        });
     }
 }
