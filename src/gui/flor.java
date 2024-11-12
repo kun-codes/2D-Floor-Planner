@@ -127,10 +127,31 @@ public class flor {
             Graphics2D g2d = (Graphics2D) g;
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Draw your custom graphics here
+            // Draw grid lines
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.setStroke(new BasicStroke(1));
+            
+            // Vertical grid lines
+            for (int x = 0; x < getWidth(); x += 50) {
+                g2d.drawLine(x, 0, x, getHeight());
+            }
+            
+            // Horizontal grid lines
+            for (int y = 0; y < getHeight(); y += 50) {
+                g2d.drawLine(0, y, getWidth(), y);
+            }
+
+            // Draw main axes
             g2d.setColor(Color.BLACK);
-            g2d.drawLine(0, 0, getWidth(), getHeight());
-            g2d.drawLine(0, getHeight(), getWidth(), 0);
+            g2d.setStroke(new BasicStroke(2));
+            
+            // X axis
+            int centerY = getHeight() / 2;
+            g2d.drawLine(0, centerY, getWidth(), centerY);
+            
+            // Y axis
+            int centerX = getWidth() / 2;
+            g2d.drawLine(centerX, 0, centerX, getHeight());
         }
     }
 
