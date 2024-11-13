@@ -9,13 +9,15 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import javax.swing.BorderFactory;
 import javax.swing.border.Border;
+import java.awt.geom.Point2D;
+import model.rooms.*;
 
 import static java.lang.Integer.parseInt;
 
 public class flor {
     private JPanel rootPanel;
     private JTabbedPane objectPlace;
-    private JButton livingRoomButton;
+    private JButton drawingRoomButton;
     private JButton diningRoomButton;
     private JButton bedroomButton;
     private JButton kitchenButton;
@@ -36,7 +38,7 @@ public class flor {
     private JPanel optionsPanel;
 
     public flor() {
-        addRoomButtonActionListener(livingRoomButton, "Living Room");
+        addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
         addRoomButtonActionListener(diningRoomButton, "Dining Room");
         addRoomButtonActionListener(bedroomButton, "Bedroom");
         addRoomButtonActionListener(kitchenButton, "Kitchen");
@@ -54,23 +56,86 @@ public class flor {
                 String widthText = widthTextField.getText();
                 
                 if (isPositiveInteger(heightText) && isPositiveInteger(widthText)) {
-                    System.out.println(roomName + " of dimensions " + heightText + " by " + widthText + " has been created");
-                    Border blackline = BorderFactory.createLineBorder(Color.black);
-                    JLabel newLabel = new JLabel(roomName);
-                    newLabel.setBorder(blackline);
-                    newLabel.setMinimumSize(new Dimension(parseInt(widthText), parseInt(heightText)));
-                    newLabel.setPreferredSize(new Dimension(parseInt(widthText), parseInt(heightText)));
-                    newLabel.setMaximumSize(new Dimension(parseInt(widthText), parseInt(heightText)));
-                    newLabel.setBounds(0, 0, parseInt(widthText), parseInt(heightText));
-                    newLabel.setForeground(Color.BLACK);
+                    int height = parseInt(heightText);
+                    int width = parseInt(widthText);
+                    
+                    // Get origin point (center of canvas)
+                    Point2D.Float origin = new Point2D.Float(1000, 1000); // Canvas is 2000x2000
+                    
+                    Room room = null;
+                    switch(roomName) {
+                        case "Living Room":
+                            room = new DrawingRoom(width, height, origin);
+                            break;
+                        case "Dining Room": 
+                            room = new DiningSpaceRoom(width, height, origin);
+                            break;
+                        case "Bedroom":
+                            room = new Bedroom(width, height, origin);
+                            break;
+                        case "Kitchen":
+                            room = new KitchenRoom(width, height, origin);
+                            break;
+                        case "Bathroom":
+                            room = new Bathroom(width, height, origin);
+                            break;
+                    }
 
-                    canvasPanel.add(newLabel);
-                    canvasPanel.revalidate();
-                    canvasPanel.repaint();
+                    if (room != null) {
+                        JPanel roomPanel = new JPanel();
+                        roomPanel.setBackground(room.getColor());
+                        roomPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+                        roomPanel.setLayout(new GridBagLayout()); // For centering label
+                        
+                        // Create label for room name
+                        JLabel nameLabel = new JLabel();
+                        nameLabel.setForeground(Color.DARK_GRAY);
+                        
+                        // Calculate available space for text
+                        int availableWidth = width - 10; // 5px padding on each side
+                        int availableHeight = height - 10;
+                        
+                        // Format room name based on available space
+                        String displayText = roomName;
+                        FontMetrics fm = nameLabel.getFontMetrics(nameLabel.getFont());
+                        
+                        if (fm.stringWidth(roomName) > availableWidth) {
+                            // Try splitting by words
+                            String[] words = roomName.split(" ");
+                            StringBuilder text = new StringBuilder("<html><center>");
+                            for (String word : words) {
+                                text.append(word).append("<br>");
+                            }
+                            text.append("</center></html>");
+                            displayText = text.toString();
+                            
+                            // Check if height is still too small
+                            if (fm.getHeight() * words.length > availableHeight) {
+                                displayText = "...";
+                            }
+                        }
+                        
+                        nameLabel.setText(displayText);
+                        roomPanel.add(nameLabel);
+                        
+                        // Set size
+                        roomPanel.setSize(new Dimension(width, height));
+                        
+                        // Calculate position to center room at origin
+                        int x = (int)origin.x - width/2;
+                        int y = (int)origin.y - height/2;
+                        roomPanel.setBounds(x, y, width, height);
+                        
+                        canvasPanel.add(roomPanel);
+                        canvasPanel.revalidate();
+                        canvasPanel.repaint();
+                        
+                        System.out.println(roomName + " of dimensions " + width + " by " + height + " has been created");
+                    }
+                    
                     heightTextField.setText("");
                     widthTextField.setText("");
-                }
-                else {
+                } else {
                     System.out.println("Enter valid positive dimensions");
                     heightTextField.setText("");
                     widthTextField.setText("");
@@ -90,6 +155,7 @@ public class flor {
 
     private void createUIComponents() {
         canvasPanel = new CanvasPanel();
+        canvasPanel.setLayout(null); // Set layout to null for absolute positioning
     }
 
     private class CanvasPanel extends JPanel {

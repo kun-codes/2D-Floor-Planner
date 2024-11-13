@@ -33,14 +33,14 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="7a054" class="javax.swing.JButton" binding="livingRoomButton" default-binding="true">
+                  <component id="7a054" class="javax.swing.JButton" binding="drawingRoomButton">
                     <constraints>
                       <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
                         <preferred-size width="142" height="34"/>
                       </grid>
                     </constraints>
                     <properties>
-                      <text value="Living Room"/>
+                      <text value="Drawing Room"/>
                     </properties>
                   </component>
                   <component id="5faaa" class="javax.swing.JButton" binding="diningRoomButton" default-binding="true">
