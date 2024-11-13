@@ -58,6 +58,9 @@ public class flor {
                     Border blackline = BorderFactory.createLineBorder(Color.black);
                     JLabel newLabel = new JLabel(roomName);
                     newLabel.setBorder(blackline);
+                    newLabel.setMinimumSize(new Dimension(parseInt(widthText), parseInt(heightText)));
+                    newLabel.setPreferredSize(new Dimension(parseInt(widthText), parseInt(heightText)));
+                    newLabel.setMaximumSize(new Dimension(parseInt(widthText), parseInt(heightText)));
                     newLabel.setBounds(0, 0, parseInt(widthText), parseInt(heightText));
                     newLabel.setForeground(Color.BLACK);
 
