@@ -7,6 +7,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import javax.swing.BorderFactory;
+import javax.swing.border.Border;
+
+import static java.lang.Integer.parseInt;
 
 public class flor {
     private JPanel rootPanel;
@@ -29,6 +33,7 @@ public class flor {
     private JTextField widthTextField;
     private JScrollPane scrollPane;
     private JPanel canvasPanel;
+    private JPanel optionsPanel;
 
     public flor() {
         addRoomButtonActionListener(livingRoomButton, "Living Room");
@@ -50,9 +55,19 @@ public class flor {
                 
                 if (isPositiveInteger(heightText) && isPositiveInteger(widthText)) {
                     System.out.println(roomName + " of dimensions " + heightText + " by " + widthText + " has been created");
+                    Border blackline = BorderFactory.createLineBorder(Color.black);
+                    JLabel newLabel = new JLabel(roomName);
+                    newLabel.setBorder(blackline);
+                    newLabel.setBounds(0, 0, parseInt(widthText), parseInt(heightText));
+                    newLabel.setForeground(Color.BLACK);
+
+                    canvasPanel.add(newLabel);
+                    canvasPanel.revalidate();
+                    canvasPanel.repaint();
                     heightTextField.setText("");
                     widthTextField.setText("");
-                } else {
+                }
+                else {
                     System.out.println("Enter valid positive dimensions");
                     heightTextField.setText("");
                     widthTextField.setText("");
@@ -63,7 +78,7 @@ public class flor {
 
     private boolean isPositiveInteger(String text) {
         try {
-            int value = Integer.parseInt(text);
+            int value = parseInt(text);
             return value > 0;
         } catch (NumberFormatException e) {
             return false;
@@ -185,7 +200,12 @@ public class flor {
         frame.pack();
         frame.setSize(1920, 1080);
         frame.setVisible(true);
-        
+        frame.setLocationRelativeTo(null);
+        frame.setLocation(0,0);
+        frame.setResizable(false);
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        frame.setBounds(100, 100, (int) dim.getWidth(), (int) dim.getHeight());
+        frame.setLocationRelativeTo(null);
         // Center viewport after frame is visible
         SwingUtilities.invokeLater(() -> {
             if (florInstance.canvasPanel instanceof CanvasPanel) {
