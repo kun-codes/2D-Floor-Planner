@@ -125,7 +125,10 @@ public class flor {
                         int x = (int)origin.x - width/2;
                         int y = (int)origin.y - height/2;
                         roomPanel.setBounds(x, y, width, height);
-                        
+
+                        // Add drag-and-drop functionality
+                        addDragAndDropFunctionality(roomPanel);
+
                         canvasPanel.add(roomPanel);
                         canvasPanel.revalidate();
                         canvasPanel.repaint();
@@ -143,7 +146,34 @@ public class flor {
             }
         });
     }
+    private void addDragAndDropFunctionality(JPanel panel) {
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            private Point initialClick;
+            private int originalX, originalY;
 
+            @Override
+            public void mousePressed(MouseEvent e) {
+                initialClick = e.getPoint();
+                originalX = panel.getX();
+                originalY = panel.getY();
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (initialClick != null) {
+                    int deltaX = e.getX() - initialClick.x;
+                    int deltaY = e.getY() - initialClick.y;
+
+                    panel.setLocation(originalX + deltaX, originalY + deltaY);
+                    canvasPanel.revalidate();
+                    canvasPanel.repaint();
+                }
+            }
+        };
+
+        panel.addMouseListener(mouseAdapter);
+        panel.addMouseMotionListener(mouseAdapter);
+    }
     private boolean isPositiveInteger(String text) {
         try {
             int value = parseInt(text);
