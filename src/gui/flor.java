@@ -48,6 +48,7 @@ public class flor {
         scrollPane.setViewportView(canvasPanel);
     }
 
+    // Adds action listener to room creation buttons to handle room placement and sizing
     private void addRoomButtonActionListener(JButton button, String roomName) {
         button.addActionListener(new ActionListener() {
             @Override
@@ -126,6 +127,7 @@ public class flor {
                         int y = (int)origin.y - height/2;
                         roomPanel.setBounds(x, y, width, height);
                         
+                        // Add room to canvas and refresh display
                         canvasPanel.add(roomPanel);
                         canvasPanel.revalidate();
                         canvasPanel.repaint();
@@ -133,6 +135,7 @@ public class flor {
                         System.out.println(roomName + " of dimensions " + width + " by " + height + " has been created");
                     }
                     
+                    // Clear input fields after room creation
                     heightTextField.setText("");
                     widthTextField.setText("");
                 } else {
@@ -173,9 +176,11 @@ public class flor {
                 }
             });
 
+            // Mouse adapter for canvas panning
             MouseAdapter mouseAdapter = new MouseAdapter() {
                 private Point lastDragPoint;
 
+                // Track starting point of drag
                 @Override
                 public void mousePressed(MouseEvent e) {
                     if (SwingUtilities.isMiddleMouseButton(e)) {
@@ -183,7 +188,8 @@ public class flor {
                     }
                 }
 
-                @Override
+                // Handle panning by calculating delta movement and updating viewport position
+                @Override 
                 public void mouseDragged(MouseEvent e) {
                     if (SwingUtilities.isMiddleMouseButton(e)) {
                         Point currentDragPoint = e.getPoint();
@@ -191,9 +197,11 @@ public class flor {
                             JViewport viewport = scrollPane.getViewport();
                             Point viewPosition = viewport.getViewPosition();
                             
+                            // Calculate movement with reduced speed factor
                             int deltaX = (int)((currentDragPoint.x - lastDragPoint.x) * SCROLL_SPEED_FACTOR);
                             int deltaY = (int)((currentDragPoint.y - lastDragPoint.y) * SCROLL_SPEED_FACTOR);
                             
+                            // Constrain viewport movement within canvas bounds
                             viewPosition.x = Math.max(0, Math.min(viewPosition.x - deltaX, 
                                 getWidth() - viewport.getWidth()));
                             viewPosition.y = Math.max(0, Math.min(viewPosition.y - deltaY, 
@@ -205,6 +213,7 @@ public class flor {
                     }
                 }
 
+                // Reset drag point when mouse released
                 @Override
                 public void mouseReleased(MouseEvent e) {
                     lastDragPoint = null;
@@ -215,6 +224,7 @@ public class flor {
             addMouseMotionListener(mouseAdapter);
         }
 
+        // Centers the viewport on the canvas when component is shown
         private void centerViewport() {
             if (scrollPane != null && scrollPane.getViewport() != null) {
                 JViewport viewport = scrollPane.getViewport();
@@ -226,14 +236,15 @@ public class flor {
             }
         }
 
-
+        // Custom painting for canvas grid lines
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
+            // Enable antialiasing for smoother lines
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Draw grid lines
+            // Draw light gray grid lines at 50px intervals
             g2d.setColor(Color.LIGHT_GRAY);
             g2d.setStroke(new BasicStroke(1));
             
