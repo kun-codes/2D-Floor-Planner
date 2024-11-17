@@ -65,7 +65,7 @@ public class flor {
                     
                     Room room = null;
                     switch(roomName) {
-                        case "Living Room":
+                        case "Drawing Room":
                             room = new DrawingRoom(width, height, origin);
                             break;
                         case "Dining Room": 
