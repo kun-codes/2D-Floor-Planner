@@ -48,6 +48,7 @@ public class flor {
         scrollPane.setViewportView(canvasPanel);
     }
 
+    // Adds action listener to room creation buttons to handle room placement and sizing
     private void addRoomButtonActionListener(JButton button, String roomName) {
         button.addActionListener(new ActionListener() {
             @Override
@@ -125,17 +126,19 @@ public class flor {
                         int x = (int)origin.x - width/2;
                         int y = (int)origin.y - height/2;
                         roomPanel.setBounds(x, y, width, height);
-
-                        // Add drag-and-drop functionality
-                        addDragAndDropFunctionality(roomPanel);
-
+                        
+                        // Add room to canvas and refresh display
                         canvasPanel.add(roomPanel);
                         canvasPanel.revalidate();
                         canvasPanel.repaint();
                         
+                        // Add drag and drop functionality to the room
+                        addDragAndDropToRoom(roomPanel);
+                        
                         System.out.println(roomName + " of dimensions " + width + " by " + height + " has been created");
                     }
                     
+                    // Clear input fields after room creation
                     heightTextField.setText("");
                     widthTextField.setText("");
                 } else {
@@ -146,34 +149,7 @@ public class flor {
             }
         });
     }
-    private void addDragAndDropFunctionality(JPanel panel) {
-        MouseAdapter mouseAdapter = new MouseAdapter() {
-            private Point initialClick;
-            private int originalX, originalY;
 
-            @Override
-            public void mousePressed(MouseEvent e) {
-                initialClick = e.getPoint();
-                originalX = panel.getX();
-                originalY = panel.getY();
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (initialClick != null) {
-                    int deltaX = e.getX() - initialClick.x;
-                    int deltaY = e.getY() - initialClick.y;
-
-                    panel.setLocation(originalX + deltaX, originalY + deltaY);
-                    canvasPanel.revalidate();
-                    canvasPanel.repaint();
-                }
-            }
-        };
-
-        panel.addMouseListener(mouseAdapter);
-        panel.addMouseMotionListener(mouseAdapter);
-    }
     private boolean isPositiveInteger(String text) {
         try {
             int value = parseInt(text);
@@ -203,9 +179,11 @@ public class flor {
                 }
             });
 
+            // Mouse adapter for canvas panning
             MouseAdapter mouseAdapter = new MouseAdapter() {
                 private Point lastDragPoint;
 
+                // Track starting point of drag
                 @Override
                 public void mousePressed(MouseEvent e) {
                     if (SwingUtilities.isMiddleMouseButton(e)) {
@@ -213,7 +191,8 @@ public class flor {
                     }
                 }
 
-                @Override
+                // Handle panning by calculating delta movement and updating viewport position
+                @Override 
                 public void mouseDragged(MouseEvent e) {
                     if (SwingUtilities.isMiddleMouseButton(e)) {
                         Point currentDragPoint = e.getPoint();
@@ -221,9 +200,11 @@ public class flor {
                             JViewport viewport = scrollPane.getViewport();
                             Point viewPosition = viewport.getViewPosition();
                             
+                            // Calculate movement with reduced speed factor
                             int deltaX = (int)((currentDragPoint.x - lastDragPoint.x) * SCROLL_SPEED_FACTOR);
                             int deltaY = (int)((currentDragPoint.y - lastDragPoint.y) * SCROLL_SPEED_FACTOR);
                             
+                            // Constrain viewport movement within canvas bounds
                             viewPosition.x = Math.max(0, Math.min(viewPosition.x - deltaX, 
                                 getWidth() - viewport.getWidth()));
                             viewPosition.y = Math.max(0, Math.min(viewPosition.y - deltaY, 
@@ -235,6 +216,7 @@ public class flor {
                     }
                 }
 
+                // Reset drag point when mouse released
                 @Override
                 public void mouseReleased(MouseEvent e) {
                     lastDragPoint = null;
@@ -245,6 +227,7 @@ public class flor {
             addMouseMotionListener(mouseAdapter);
         }
 
+        // Centers the viewport on the canvas when component is shown
         private void centerViewport() {
             if (scrollPane != null && scrollPane.getViewport() != null) {
                 JViewport viewport = scrollPane.getViewport();
@@ -256,13 +239,15 @@ public class flor {
             }
         }
 
+        // Custom painting for canvas grid lines
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
+            // Enable antialiasing for smoother lines
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Draw grid lines
+            // Draw light gray grid lines at 50px intervals
             g2d.setColor(Color.LIGHT_GRAY);
             g2d.setStroke(new BasicStroke(1));
             
@@ -288,6 +273,80 @@ public class flor {
             int centerX = getWidth() / 2;
             g2d.drawLine(centerX, 0, centerX, getHeight());
         }
+    }
+
+    private void addDragAndDropToRoom(JPanel roomPanel) {
+        MouseAdapter roomDragAdapter = new MouseAdapter() {
+            private Point clickOffset;
+            private Point originalPosition;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    roomPanel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    clickOffset = new Point(
+                        roomPanel.getWidth() / 2 - e.getX(),
+                        roomPanel.getHeight() / 2 - e.getY()
+                    );
+                    originalPosition = roomPanel.getLocation();
+                }
+            }
+            
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    Point canvasPoint = SwingUtilities.convertPoint(
+                        roomPanel,
+                        e.getX() + clickOffset.x,
+                        e.getY() + clickOffset.y,
+                        canvasPanel
+                    );
+                    
+                    int newX = canvasPoint.x - roomPanel.getWidth() / 2;
+                    int newY = canvasPoint.y - roomPanel.getHeight() / 2;
+                    
+                    newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - roomPanel.getWidth()));
+                    newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - roomPanel.getHeight()));
+                    
+                    roomPanel.setLocation(newX, newY);
+                }
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                roomPanel.setCursor(Cursor.getDefaultCursor());
+                
+                // Check for overlaps with other rooms
+                if (hasOverlap(roomPanel)) {
+                    // Show error dialog
+                    JOptionPane.showMessageDialog(canvasPanel,
+                        "Room overlaps with existing room!",
+                        "Overlap Error",
+                        JOptionPane.ERROR_MESSAGE);
+                        
+                    // Snap back to original position
+                    roomPanel.setLocation(originalPosition);
+                }
+            }
+        };
+        
+        roomPanel.addMouseListener(roomDragAdapter);
+        roomPanel.addMouseMotionListener(roomDragAdapter);
+    }
+
+    private boolean hasOverlap(JPanel roomPanel) {
+        Rectangle bounds = roomPanel.getBounds();
+        
+        // Check against all other room panels
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && comp != roomPanel) {
+                Rectangle otherBounds = comp.getBounds();
+                if (bounds.intersects(otherBounds)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static void main(String args[])
