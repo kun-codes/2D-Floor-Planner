@@ -278,23 +278,23 @@ public class flor {
     private void addDragAndDropToRoom(JPanel roomPanel) {
         MouseAdapter roomDragAdapter = new MouseAdapter() {
             private Point clickOffset;
+            private Point originalPosition;
 
             @Override
             public void mousePressed(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     roomPanel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                    // Calculate offset from click point to room center
                     clickOffset = new Point(
                         roomPanel.getWidth() / 2 - e.getX(),
                         roomPanel.getHeight() / 2 - e.getY()
                     );
+                    originalPosition = roomPanel.getLocation();
                 }
             }
             
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    // Convert mouse coordinates to canvas space
                     Point canvasPoint = SwingUtilities.convertPoint(
                         roomPanel,
                         e.getX() + clickOffset.x,
@@ -302,15 +302,12 @@ public class flor {
                         canvasPanel
                     );
                     
-                    // Calculate new position
                     int newX = canvasPoint.x - roomPanel.getWidth() / 2;
                     int newY = canvasPoint.y - roomPanel.getHeight() / 2;
                     
-                    // Constrain to canvas bounds
                     newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - roomPanel.getWidth()));
                     newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - roomPanel.getHeight()));
                     
-                    // Update position directly
                     roomPanel.setLocation(newX, newY);
                 }
             }
@@ -318,12 +315,38 @@ public class flor {
             @Override
             public void mouseReleased(MouseEvent e) {
                 roomPanel.setCursor(Cursor.getDefaultCursor());
-                clickOffset = null;
+                
+                // Check for overlaps with other rooms
+                if (hasOverlap(roomPanel)) {
+                    // Show error dialog
+                    JOptionPane.showMessageDialog(canvasPanel,
+                        "Room overlaps with existing room!",
+                        "Overlap Error",
+                        JOptionPane.ERROR_MESSAGE);
+                        
+                    // Snap back to original position
+                    roomPanel.setLocation(originalPosition);
+                }
             }
         };
         
         roomPanel.addMouseListener(roomDragAdapter);
         roomPanel.addMouseMotionListener(roomDragAdapter);
+    }
+
+    private boolean hasOverlap(JPanel roomPanel) {
+        Rectangle bounds = roomPanel.getBounds();
+        
+        // Check against all other room panels
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && comp != roomPanel) {
+                Rectangle otherBounds = comp.getBounds();
+                if (bounds.intersects(otherBounds)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static void main(String args[])
