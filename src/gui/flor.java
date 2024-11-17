@@ -132,6 +132,9 @@ public class flor {
                         canvasPanel.revalidate();
                         canvasPanel.repaint();
                         
+                        // Add drag and drop functionality to the room
+                        addDragAndDropToRoom(roomPanel);
+                        
                         System.out.println(roomName + " of dimensions " + width + " by " + height + " has been created");
                     }
                     
@@ -270,6 +273,57 @@ public class flor {
             int centerX = getWidth() / 2;
             g2d.drawLine(centerX, 0, centerX, getHeight());
         }
+    }
+
+    private void addDragAndDropToRoom(JPanel roomPanel) {
+        MouseAdapter roomDragAdapter = new MouseAdapter() {
+            private Point clickOffset;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    roomPanel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                    // Calculate offset from click point to room center
+                    clickOffset = new Point(
+                        roomPanel.getWidth() / 2 - e.getX(),
+                        roomPanel.getHeight() / 2 - e.getY()
+                    );
+                }
+            }
+            
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    // Convert mouse coordinates to canvas space
+                    Point canvasPoint = SwingUtilities.convertPoint(
+                        roomPanel,
+                        e.getX() + clickOffset.x,
+                        e.getY() + clickOffset.y,
+                        canvasPanel
+                    );
+                    
+                    // Calculate new position
+                    int newX = canvasPoint.x - roomPanel.getWidth() / 2;
+                    int newY = canvasPoint.y - roomPanel.getHeight() / 2;
+                    
+                    // Constrain to canvas bounds
+                    newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - roomPanel.getWidth()));
+                    newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - roomPanel.getHeight()));
+                    
+                    // Update position directly
+                    roomPanel.setLocation(newX, newY);
+                }
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                roomPanel.setCursor(Cursor.getDefaultCursor());
+                clickOffset = null;
+            }
+        };
+        
+        roomPanel.addMouseListener(roomDragAdapter);
+        roomPanel.addMouseMotionListener(roomDragAdapter);
     }
 
     public static void main(String args[])
