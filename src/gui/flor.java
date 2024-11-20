@@ -54,6 +54,47 @@ public class flor {
             private JPanel draggedRoom = null;
             private Point clickOffset;
             private boolean wasDragged = false;
+            private Point lastPoint = null;
+
+            private JPanel createRoomPanel(Room room, int width, int height) {
+                JPanel panel = new JPanel() {
+                    @Override
+                    public void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        setDoubleBuffered(true);
+                    }
+                };
+                
+                panel.setBackground(room.getColor());
+                panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+                panel.setLayout(new GridBagLayout());
+                
+                JLabel nameLabel = new JLabel(roomName) {
+                    @Override
+                    public void paint(Graphics g) {
+                        setVisible(true); // Force label visibility
+                        super.paint(g);
+                    }
+                };
+                nameLabel.setForeground(Color.DARK_GRAY);
+                nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                
+                GridBagConstraints gbc = new GridBagConstraints();
+                gbc.gridx = 0;
+                gbc.gridy = 0;
+                gbc.weightx = 1.0;
+                gbc.weighty = 1.0;
+                gbc.fill = GridBagConstraints.BOTH;
+                
+                panel.add(nameLabel, gbc);
+                panel.setSize(width, height);
+                
+                // Force immediate layout calculation
+                panel.doLayout();
+                panel.validate();
+                
+                return panel;
+            }
 
             @Override
             public void mousePressed(MouseEvent e) {
@@ -103,48 +144,17 @@ public class flor {
                         }
 
                         if (room != null) {
-                            draggedRoom = new JPanel() {
-                                // Override paintComponent to ensure proper rendering
-                                @Override
-                                protected void paintComponent(Graphics g) {
-                                    super.paintComponent(g);
-                                    setDoubleBuffered(true);
-                                }
-                            };
-                            
-                            draggedRoom.setBackground(room.getColor());
-                            draggedRoom.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
-                            draggedRoom.setLayout(new GridBagLayout());
-                            
-                            // Create and configure label
-                            JLabel nameLabel = new JLabel(roomName);
-                            nameLabel.setForeground(Color.DARK_GRAY);
-                            nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                            
-                            // Configure constraints
-                            GridBagConstraints gbc = new GridBagConstraints();
-                            gbc.gridx = 0;
-                            gbc.gridy = 0;
-                            gbc.weightx = 1.0;
-                            gbc.weighty = 1.0;
-                            gbc.fill = GridBagConstraints.BOTH;
-                            
-                            draggedRoom.add(nameLabel, gbc);
-                            draggedRoom.setSize(width, height);
-                            
-                            // Force immediate layout update
-                            draggedRoom.validate();
-                            
+                            draggedRoom = createRoomPanel(room, width, height);
                             canvasPanel.add(draggedRoom);
-                            canvasPanel.revalidate();
-                            canvasPanel.repaint();
                             
-                            // Add component listener to ensure visibility
+                            // Add visibility listener
                             draggedRoom.addComponentListener(new ComponentAdapter() {
                                 @Override
                                 public void componentShown(ComponentEvent e) {
-                                    draggedRoom.revalidate();
-                                    draggedRoom.repaint();
+                                    SwingUtilities.invokeLater(() -> {
+                                        draggedRoom.revalidate();
+                                        draggedRoom.repaint();
+                                    });
                                 }
                             });
                             
