@@ -1,17 +1,12 @@
 package gui;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
 import javax.swing.BorderFactory;
 import java.awt.geom.Point2D;
 import model.rooms.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+
 import java.awt.GraphicsEnvironment;
-import java.awt.event.ActionEvent;
 
 import static java.lang.Integer.parseInt;
 
