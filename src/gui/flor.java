@@ -50,104 +50,169 @@ public class flor {
 
     // Adds action listener to room creation buttons to handle room placement and sizing
     private void addRoomButtonActionListener(JButton button, String roomName) {
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String heightText = heightTextField.getText();
-                String widthText = widthTextField.getText();
-                
-                if (isPositiveInteger(heightText) && isPositiveInteger(widthText)) {
-                    int height = parseInt(heightText);
-                    int width = parseInt(widthText);
-                    
-                    // Get origin point (center of canvas)
-                    Point2D.Float origin = new Point2D.Float(1000, 1000); // Canvas is 2000x2000
-                    
-                    Room room = null;
-                    switch(roomName) {
-                        case "Drawing Room":
-                            room = new DrawingRoom(width, height, origin);
-                            break;
-                        case "Dining Room": 
-                            room = new DiningSpaceRoom(width, height, origin);
-                            break;
-                        case "Bedroom":
-                            room = new Bedroom(width, height, origin);
-                            break;
-                        case "Kitchen":
-                            room = new KitchenRoom(width, height, origin);
-                            break;
-                        case "Bathroom":
-                            room = new Bathroom(width, height, origin);
-                            break;
-                    }
+        MouseAdapter buttonDragAdapter = new MouseAdapter() {
+            private JPanel draggedRoom = null;
+            private Point clickOffset;
+            private boolean wasDragged = false;
+            private Point lastPoint = null;
 
-                    if (room != null) {
-                        JPanel roomPanel = new JPanel();
-                        roomPanel.setBackground(room.getColor());
-                        roomPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
-                        roomPanel.setLayout(new GridBagLayout()); // For centering label
-                        
-                        // Create label for room name
-                        JLabel nameLabel = new JLabel();
-                        nameLabel.setForeground(Color.DARK_GRAY);
-                        
-                        // Calculate available space for text
-                        int availableWidth = width - 10; // 5px padding on each side
-                        int availableHeight = height - 10;
-                        
-                        // Format room name based on available space
-                        String displayText = roomName;
-                        FontMetrics fm = nameLabel.getFontMetrics(nameLabel.getFont());
-                        
-                        if (fm.stringWidth(roomName) > availableWidth) {
-                            // Try splitting by words
-                            String[] words = roomName.split(" ");
-                            StringBuilder text = new StringBuilder("<html><center>");
-                            for (String word : words) {
-                                text.append(word).append("<br>");
-                            }
-                            text.append("</center></html>");
-                            displayText = text.toString();
-                            
-                            // Check if height is still too small
-                            if (fm.getHeight() * words.length > availableHeight) {
-                                displayText = "...";
-                            }
-                        }
-                        
-                        nameLabel.setText(displayText);
-                        roomPanel.add(nameLabel);
-                        
-                        // Set size
-                        roomPanel.setSize(new Dimension(width, height));
-                        
-                        // Calculate position to center room at origin
-                        int x = (int)origin.x - width/2;
-                        int y = (int)origin.y - height/2;
-                        roomPanel.setBounds(x, y, width, height);
-                        
-                        // Add room to canvas and refresh display
-                        canvasPanel.add(roomPanel);
-                        canvasPanel.revalidate();
-                        canvasPanel.repaint();
-                        
-                        // Add drag and drop functionality to the room
-                        addDragAndDropToRoom(roomPanel);
-                        
-                        System.out.println(roomName + " of dimensions " + width + " by " + height + " has been created");
+            private JPanel createRoomPanel(Room room, int width, int height) {
+                JPanel panel = new JPanel() {
+                    @Override
+                    public void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        setDoubleBuffered(true);
                     }
-                    
-                    // Clear input fields after room creation
-                    heightTextField.setText("");
-                    widthTextField.setText("");
-                } else {
-                    System.out.println("Enter valid positive dimensions");
-                    heightTextField.setText("");
-                    widthTextField.setText("");
+                };
+                
+                panel.setBackground(room.getColor());
+                panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+                panel.setLayout(new GridBagLayout());
+                
+                JLabel nameLabel = new JLabel(roomName) {
+                    @Override
+                    public void paint(Graphics g) {
+                        setVisible(true); // Force label visibility
+                        super.paint(g);
+                    }
+                };
+                nameLabel.setForeground(Color.DARK_GRAY);
+                nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                
+                GridBagConstraints gbc = new GridBagConstraints();
+                gbc.gridx = 0;
+                gbc.gridy = 0;
+                gbc.weightx = 1.0;
+                gbc.weighty = 1.0;
+                gbc.fill = GridBagConstraints.BOTH;
+                
+                panel.add(nameLabel, gbc);
+                panel.setSize(width, height);
+                
+                // Force immediate layout calculation
+                panel.doLayout();
+                panel.validate();
+                
+                return panel;
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    button.getModel().setArmed(true);
+                    wasDragged = false;
                 }
             }
-        });
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                wasDragged = true;
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    if (draggedRoom == null) {
+                        String heightText = heightTextField.getText();
+                        String widthText = widthTextField.getText();
+                        
+                        if (!isPositiveInteger(heightText) || !isPositiveInteger(widthText)) {
+                            return;
+                        }
+
+                        int height = parseInt(heightText);
+                        int width = parseInt(widthText);
+                        
+                        // Create room at mouse position
+                        Point mousePoint = e.getLocationOnScreen();
+                        SwingUtilities.convertPointFromScreen(mousePoint, canvasPanel);
+                        Point2D.Float origin = new Point2D.Float(mousePoint.x, mousePoint.y);
+                        
+                        Room room = null;
+                        switch(roomName) {
+                            case "Drawing Room":
+                                room = new DrawingRoom(width, height, origin);
+                                break;
+                            case "Dining Room": 
+                                room = new DiningSpaceRoom(width, height, origin);
+                                break;
+                            case "Bedroom":
+                                room = new Bedroom(width, height, origin);
+                                break;
+                            case "Kitchen":
+                                room = new KitchenRoom(width, height, origin);
+                                break;
+                            case "Bathroom":
+                                room = new Bathroom(width, height, origin);
+                                break;
+                        }
+
+                        if (room != null) {
+                            draggedRoom = createRoomPanel(room, width, height);
+                            canvasPanel.add(draggedRoom);
+                            
+                            // Add visibility listener
+                            draggedRoom.addComponentListener(new ComponentAdapter() {
+                                @Override
+                                public void componentShown(ComponentEvent e) {
+                                    SwingUtilities.invokeLater(() -> {
+                                        draggedRoom.revalidate();
+                                        draggedRoom.repaint();
+                                    });
+                                }
+                            });
+                            
+                            clickOffset = new Point(width/2, height/2);
+                        }
+                    }
+                    
+                    if (draggedRoom != null) {
+                        Point mousePoint = e.getLocationOnScreen();
+                        SwingUtilities.convertPointFromScreen(mousePoint, canvasPanel);
+                        
+                        int newX = mousePoint.x - clickOffset.x;
+                        int newY = mousePoint.y - clickOffset.y;
+                        
+                        newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - draggedRoom.getWidth()));
+                        newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - draggedRoom.getHeight()));
+                        
+                        draggedRoom.setLocation(newX, newY);
+                        canvasPanel.repaint();
+                    }
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.getModel().setArmed(false);
+                
+                if (!wasDragged) {
+                    JOptionPane.showMessageDialog(canvasPanel,
+                        "Please drag the button to create a room",
+                        "Action Required",
+                        JOptionPane.WARNING_MESSAGE);
+                    heightTextField.setText("");
+                    widthTextField.setText("");
+                    return;
+                }
+                
+                if (draggedRoom != null) {
+                    if (hasOverlap(draggedRoom)) {
+                        canvasPanel.remove(draggedRoom);
+                        JOptionPane.showMessageDialog(canvasPanel,
+                            "Room overlaps with existing room!",
+                            "Overlap Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        addDragAndDropToRoom(draggedRoom);
+                    }
+                    canvasPanel.repaint();
+                    draggedRoom = null;
+                }
+                
+                heightTextField.setText("");
+                widthTextField.setText("");
+            }
+        };
+        
+        button.addMouseListener(buttonDragAdapter);
+        button.addMouseMotionListener(buttonDragAdapter);
     }
 
     private boolean isPositiveInteger(String text) {
