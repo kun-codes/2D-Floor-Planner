@@ -1,12 +1,17 @@
 package gui;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import javax.swing.BorderFactory;
 import java.awt.geom.Point2D;
 import model.rooms.*;
-
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.GraphicsEnvironment;
+import java.awt.event.ActionEvent;
 
 import static java.lang.Integer.parseInt;
 
@@ -34,11 +39,17 @@ public class flor {
     private JPanel optionsPanel;
     private JLabel snappingLabel;
     private JCheckBox snappingCheckBox;
+    private JToolBar toolBar;
     private JButton ExitButton;
 
     private static final int GRID_SIZE = 50;
     private static final int SNAP_THRESHOLD = 10;
     private static JFrame frame;
+
+    private JMenu fileMenu;
+    private JMenuItem newMenuItem;
+    private JMenuItem openMenuItem;
+    private JMenuItem saveMenuItem;
 
     public flor() {
         addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
@@ -49,6 +60,38 @@ public class flor {
         addRoomButtonActionListener(studyButton, "Study");
 
         scrollPane.setViewportView(canvasPanel);
+
+        // Create menu bar
+        JMenuBar menuBar = new JMenuBar();
+
+        // Create File menu
+        fileMenu = new JMenu("File");
+        fileMenu.setMnemonic(KeyEvent.VK_F);
+
+        // Create menu items
+        newMenuItem = new JMenuItem("New", KeyEvent.VK_N);
+        newMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, ActionEvent.CTRL_MASK));
+        newMenuItem.addActionListener(e -> newFile());
+
+        openMenuItem = new JMenuItem("Open", KeyEvent.VK_O);
+        openMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, ActionEvent.CTRL_MASK));
+        openMenuItem.addActionListener(e -> openFile());
+
+        saveMenuItem = new JMenuItem("Save", KeyEvent.VK_S);
+        saveMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, ActionEvent.CTRL_MASK));
+        saveMenuItem.addActionListener(e -> saveFile());
+
+        // Add items to File menu
+        fileMenu.add(newMenuItem);
+        fileMenu.addSeparator();
+        fileMenu.add(openMenuItem);
+        fileMenu.add(saveMenuItem);
+
+        // Add File menu to menu bar
+        menuBar.add(fileMenu);
+
+        // Add menu bar to toolbar
+        toolBar.add(menuBar);
         ExitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -557,5 +600,26 @@ public class flor {
             frame.setVisible(true);
         }
         frame.requestFocus();
+    }
+
+    private void newFile() {
+        // TODO: Implement new file functionality
+        System.out.println("New file");
+    }
+
+    private void openFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            // TODO: Implement file opening
+            System.out.println("Opening: " + fileChooser.getSelectedFile().getName());
+        }
+    }
+
+    private void saveFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        if (fileChooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            // TODO: Implement file saving
+            System.out.println("Saving: " + fileChooser.getSelectedFile().getName());
+        }
     }
 }
