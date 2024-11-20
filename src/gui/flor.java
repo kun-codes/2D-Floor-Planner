@@ -1,14 +1,11 @@
 package gui;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import javax.swing.BorderFactory;
-import javax.swing.border.Border;
 import java.awt.geom.Point2D;
 import model.rooms.*;
 
@@ -36,6 +33,11 @@ public class flor {
     private JScrollPane scrollPane;
     private JPanel canvasPanel;
     private JPanel optionsPanel;
+    private JLabel snappingLabel;
+    private JCheckBox snappingCheckBox;
+
+    private static final int GRID_SIZE = 50;
+    private static final int SNAP_THRESHOLD = 10;
 
     public flor() {
         addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
@@ -109,7 +111,11 @@ public class flor {
                         newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - draggedRoom.getWidth()));
                         newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - draggedRoom.getHeight()));
                         
-                        draggedRoom.setLocation(newX, newY);
+                        Rectangle proposedBounds = new Rectangle(newX, newY, 
+                            draggedRoom.getWidth(), draggedRoom.getHeight());
+                        Point snapPoint = getSnapPosition(proposedBounds);
+                        
+                        draggedRoom.setLocation(snapPoint.x, snapPoint.y);
                         lastPoint = currentPoint;
                         lastUpdateTime = currentTime;
                     }
@@ -363,7 +369,11 @@ public class flor {
                     newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - roomPanel.getWidth()));
                     newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - roomPanel.getHeight()));
                     
-                    roomPanel.setLocation(newX, newY);
+                    Rectangle proposedBounds = new Rectangle(newX, newY, 
+                        roomPanel.getWidth(), roomPanel.getHeight());
+                    Point snapPoint = getSnapPosition(proposedBounds);
+                    
+                    roomPanel.setLocation(snapPoint.x, snapPoint.y);
                 }
             }
             
@@ -402,6 +412,81 @@ public class flor {
             }
         }
         return false;
+    }
+
+    private Point getSnapPosition(Rectangle roomBounds) {
+        if (!snappingCheckBox.isSelected()) {
+            return new Point(roomBounds.x, roomBounds.y);
+        }
+
+        int snapX = roomBounds.x;
+        int snapY = roomBounds.y;
+        int centerX = roomBounds.x + roomBounds.width/2;
+        int centerY = roomBounds.y + roomBounds.height/2;
+        
+        // Snap to grid
+        int gridSnapX = Math.round((float)snapX / GRID_SIZE) * GRID_SIZE;
+        int gridSnapY = Math.round((float)snapY / GRID_SIZE) * GRID_SIZE;
+        
+        // Snap to axes
+        int canvasCenterX = canvasPanel.getWidth() / 2;
+        int canvasCenterY = canvasPanel.getHeight() / 2;
+        
+        // Check axis snap
+        if (Math.abs(centerX - canvasCenterX) < SNAP_THRESHOLD) {
+            snapX = canvasCenterX - roomBounds.width/2;
+        }
+        if (Math.abs(centerY - canvasCenterY) < SNAP_THRESHOLD) {
+            snapY = canvasCenterY - roomBounds.height/2;
+        }
+        
+        // Check grid snap
+        if (Math.abs(snapX - gridSnapX) < SNAP_THRESHOLD) {
+            snapX = gridSnapX;
+        }
+        if (Math.abs(snapY - gridSnapY) < SNAP_THRESHOLD) {
+            snapY = gridSnapY;
+        }
+        
+        // Snap to other rooms
+        for (Component comp : canvasPanel.getComponents()) {
+            // Skip if not a room panel or is the canvas itself
+            if (!(comp instanceof JPanel) || comp == canvasPanel) {
+                continue;
+            }
+            
+            // Skip if this is the room being dragged
+            Point compLoc = comp.getLocation();
+            if (compLoc.x == roomBounds.x && compLoc.y == roomBounds.y) {
+                continue;
+            }
+
+            Rectangle otherBounds = comp.getBounds();
+            
+            // Snap to left/right edges
+            if (Math.abs(roomBounds.x - otherBounds.x) < SNAP_THRESHOLD) {
+                snapX = otherBounds.x;
+            }
+            if (Math.abs(roomBounds.x + roomBounds.width - otherBounds.x) < SNAP_THRESHOLD) {
+                snapX = otherBounds.x - roomBounds.width;
+            }
+            if (Math.abs(roomBounds.x - (otherBounds.x + otherBounds.width)) < SNAP_THRESHOLD) {
+                snapX = otherBounds.x + otherBounds.width;
+            }
+            
+            // Snap to top/bottom edges
+            if (Math.abs(roomBounds.y - otherBounds.y) < SNAP_THRESHOLD) {
+                snapY = otherBounds.y;
+            }
+            if (Math.abs(roomBounds.y + roomBounds.height - otherBounds.y) < SNAP_THRESHOLD) {
+                snapY = otherBounds.y - roomBounds.height;
+            }
+            if (Math.abs(roomBounds.y - (otherBounds.y + otherBounds.height)) < SNAP_THRESHOLD) {
+                snapY = otherBounds.y + otherBounds.height;
+            }
+        }
+        
+        return new Point(snapX, snapY);
     }
 
     public static void main(String args[])
