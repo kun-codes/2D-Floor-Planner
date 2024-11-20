@@ -55,6 +55,78 @@ public class flor {
             private Point clickOffset;
             private boolean wasDragged = false;
             private Point lastPoint = null;
+            private long lastUpdateTime = 0;
+            private static final long UPDATE_THRESHOLD = 16; // ~60 FPS
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    button.getModel().setArmed(true);
+                    wasDragged = false;
+                    
+                    // Pre-create room on press
+                    String heightText = heightTextField.getText();
+                    String widthText = widthTextField.getText();
+                    
+                    if (isPositiveInteger(heightText) && isPositiveInteger(widthText)) {
+                        int height = parseInt(heightText);
+                        int width = parseInt(widthText);
+                        Room room = createRoom(roomName, width, height);
+                        if (room != null) {
+                            draggedRoom = createRoomPanel(room, width, height);
+                            clickOffset = new Point(width/2, height/2);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && draggedRoom != null) {
+                    wasDragged = true;
+                    long currentTime = System.currentTimeMillis();
+                    
+                    // Throttle updates
+                    if (currentTime - lastUpdateTime < UPDATE_THRESHOLD) {
+                        return;
+                    }
+                    
+                    Point currentPoint = SwingUtilities.convertPoint(
+                        button, 
+                        e.getPoint(),
+                        canvasPanel
+                    );
+                    
+                    // Only update if moved significantly
+                    if (lastPoint == null || currentPoint.distance(lastPoint) > 1) {
+                        if (!canvasPanel.isAncestorOf(draggedRoom)) {
+                            canvasPanel.add(draggedRoom);
+                        }
+                        
+                        int newX = currentPoint.x - clickOffset.x;
+                        int newY = currentPoint.y - clickOffset.y;
+                        
+                        newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - draggedRoom.getWidth()));
+                        newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - draggedRoom.getHeight()));
+                        
+                        draggedRoom.setLocation(newX, newY);
+                        lastPoint = currentPoint;
+                        lastUpdateTime = currentTime;
+                    }
+                }
+            }
+
+            private Room createRoom(String roomName, int width, int height) {
+                Point2D.Float origin = new Point2D.Float(0, 0);
+                switch(roomName) {
+                    case "Drawing Room": return new DrawingRoom(width, height, origin);
+                    case "Dining Room": return new DiningSpaceRoom(width, height, origin);
+                    case "Bedroom": return new Bedroom(width, height, origin);
+                    case "Kitchen": return new KitchenRoom(width, height, origin);
+                    case "Bathroom": return new Bathroom(width, height, origin);
+                    default: return null;
+                }
+            }
 
             private JPanel createRoomPanel(Room room, int width, int height) {
                 JPanel panel = new JPanel() {
@@ -94,88 +166,6 @@ public class flor {
                 panel.validate();
                 
                 return panel;
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    button.getModel().setArmed(true);
-                    wasDragged = false;
-                }
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                wasDragged = true;
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (draggedRoom == null) {
-                        String heightText = heightTextField.getText();
-                        String widthText = widthTextField.getText();
-                        
-                        if (!isPositiveInteger(heightText) || !isPositiveInteger(widthText)) {
-                            return;
-                        }
-
-                        int height = parseInt(heightText);
-                        int width = parseInt(widthText);
-                        
-                        // Create room at mouse position
-                        Point mousePoint = e.getLocationOnScreen();
-                        SwingUtilities.convertPointFromScreen(mousePoint, canvasPanel);
-                        Point2D.Float origin = new Point2D.Float(mousePoint.x, mousePoint.y);
-                        
-                        Room room = null;
-                        switch(roomName) {
-                            case "Drawing Room":
-                                room = new DrawingRoom(width, height, origin);
-                                break;
-                            case "Dining Room": 
-                                room = new DiningSpaceRoom(width, height, origin);
-                                break;
-                            case "Bedroom":
-                                room = new Bedroom(width, height, origin);
-                                break;
-                            case "Kitchen":
-                                room = new KitchenRoom(width, height, origin);
-                                break;
-                            case "Bathroom":
-                                room = new Bathroom(width, height, origin);
-                                break;
-                        }
-
-                        if (room != null) {
-                            draggedRoom = createRoomPanel(room, width, height);
-                            canvasPanel.add(draggedRoom);
-                            
-                            // Add visibility listener
-                            draggedRoom.addComponentListener(new ComponentAdapter() {
-                                @Override
-                                public void componentShown(ComponentEvent e) {
-                                    SwingUtilities.invokeLater(() -> {
-                                        draggedRoom.revalidate();
-                                        draggedRoom.repaint();
-                                    });
-                                }
-                            });
-                            
-                            clickOffset = new Point(width/2, height/2);
-                        }
-                    }
-                    
-                    if (draggedRoom != null) {
-                        Point mousePoint = e.getLocationOnScreen();
-                        SwingUtilities.convertPointFromScreen(mousePoint, canvasPanel);
-                        
-                        int newX = mousePoint.x - clickOffset.x;
-                        int newY = mousePoint.y - clickOffset.y;
-                        
-                        newX = Math.max(0, Math.min(newX, canvasPanel.getWidth() - draggedRoom.getWidth()));
-                        newY = Math.max(0, Math.min(newY, canvasPanel.getHeight() - draggedRoom.getHeight()));
-                        
-                        draggedRoom.setLocation(newX, newY);
-                        canvasPanel.repaint();
-                    }
-                }
             }
 
             @Override
