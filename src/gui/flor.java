@@ -8,6 +8,9 @@ import java.awt.event.ComponentEvent;
 import javax.swing.BorderFactory;
 import java.awt.geom.Point2D;
 import model.rooms.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.GraphicsEnvironment;
 
 import static java.lang.Integer.parseInt;
 
@@ -38,6 +41,7 @@ public class flor {
 
     private static final int GRID_SIZE = 50;
     private static final int SNAP_THRESHOLD = 10;
+    private static JFrame frame;
 
     public flor() {
         addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
@@ -489,26 +493,66 @@ public class flor {
         return new Point(snapX, snapY);
     }
 
-    public static void main(String args[])
-    {
-        JFrame frame = new JFrame("flor");
+    public static void main(String args[]) {
+        frame = new JFrame("flor");
         flor florInstance = new flor();
         frame.setContentPane(florInstance.rootPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
-        frame.setSize(1920, 1080);
+        
+        // Add F11 key listener
+        frame.addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_F11) {
+                    toggleFullScreen();
+                }
+            }
+            
+            @Override
+            public void keyTyped(KeyEvent e) {}
+            
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        });
+        
+        frame.setFocusable(true);
+        frame.requestFocus();
+        
+        // Set initial fullscreen state
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+        frame.setUndecorated(true);
+        if (ge.getDefaultScreenDevice().isFullScreenSupported()) {
+            ge.getDefaultScreenDevice().setFullScreenWindow(frame);
+        }
+        
         frame.setVisible(true);
-        frame.setLocationRelativeTo(null);
-        frame.setLocation(0,0);
-        frame.setResizable(false);
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        frame.setBounds(100, 100, (int) dim.getWidth(), (int) dim.getHeight());
-        frame.setLocationRelativeTo(null);
-        // Center viewport after frame is visible
+        
+        // Center viewport after frame is fully initialized and visible
         SwingUtilities.invokeLater(() -> {
             if (florInstance.canvasPanel instanceof CanvasPanel) {
                 ((CanvasPanel)florInstance.canvasPanel).centerViewport();
             }
         });
+    }
+
+    private static void toggleFullScreen() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        if (frame.isUndecorated()) {
+            frame.dispose();
+            frame.setUndecorated(false);
+            ge.getDefaultScreenDevice().setFullScreenWindow(null);
+            frame.setExtendedState(frame.getExtendedState() & ~JFrame.MAXIMIZED_BOTH);
+            frame.setVisible(true);
+        } else {
+            frame.dispose();
+            frame.setUndecorated(true);
+            frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
+            if (ge.getDefaultScreenDevice().isFullScreenSupported()) {
+                ge.getDefaultScreenDevice().setFullScreenWindow(frame);
+            }
+            frame.setVisible(true);
+        }
+        frame.requestFocus();
     }
 }
