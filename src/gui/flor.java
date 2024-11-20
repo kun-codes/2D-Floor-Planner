@@ -1,15 +1,11 @@
 package gui;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
 import javax.swing.BorderFactory;
 import java.awt.geom.Point2D;
 import model.rooms.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+
 import java.awt.GraphicsEnvironment;
 
 import static java.lang.Integer.parseInt;
@@ -38,6 +34,7 @@ public class flor {
     private JPanel optionsPanel;
     private JLabel snappingLabel;
     private JCheckBox snappingCheckBox;
+    private JButton ExitButton;
 
     private static final int GRID_SIZE = 50;
     private static final int SNAP_THRESHOLD = 10;
@@ -52,6 +49,12 @@ public class flor {
         addRoomButtonActionListener(studyButton, "Study");
 
         scrollPane.setViewportView(canvasPanel);
+        ExitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
     }
 
     // Adds action listener to room creation buttons to handle room placement and sizing
