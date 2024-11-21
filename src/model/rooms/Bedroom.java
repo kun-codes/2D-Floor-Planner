@@ -5,6 +5,6 @@ import java.awt.geom.Point2D;
 
 public class Bedroom extends Room {
     public Bedroom(int length, int breadth, Point2D.Float position) {
-        super(length, breadth, position, Color.GREEN);
+        super(length, breadth, position, new Color(39, 216, 180));
     }
 }
