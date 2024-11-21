@@ -664,7 +664,6 @@ public class flor {
                     roomPanel.setBounds(bounds);
                     roomPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
                     roomPanel.setName(name);
-                    roomPanel.setBackground(new Color(200, 200, 255)); // Example color
                     roomPanel.add(new JLabel(name)); // Add a label to show room name
 
                     canvasPanel.add(roomPanel);
