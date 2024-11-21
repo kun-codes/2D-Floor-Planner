@@ -12,6 +12,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.ActionEvent;
+import java.io.*;
 
 import static java.lang.Integer.parseInt;
 
@@ -41,6 +42,9 @@ public class flor {
     private JCheckBox snappingCheckBox;
     private JToolBar toolBar;
     private JButton ExitButton;
+    private JButton SaveButton;
+    private JButton LoadButton;
+
 
     private static final int GRID_SIZE = 50;
     private static final int SNAP_THRESHOLD = 10;
@@ -92,12 +96,17 @@ public class flor {
 
         // Add menu bar to toolbar
         toolBar.add(menuBar);
-        ExitButton.addActionListener(new ActionListener() {
+        /*toolBar.add(saveButton);
+        toolBar.add(loadButton);*/
+        rootPanel.add(toolBar, BorderLayout.NORTH);
+        /*ExitButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.exit(0);
             }
-        });
+        });*/
+        // Add ExitButton functionality
+        ExitButton.addActionListener(e -> System.exit(0));
     }
 
     // Adds action listener to room creation buttons to handle room placement and sizing
@@ -192,7 +201,7 @@ public class flor {
                         setDoubleBuffered(true);
                     }
                 };
-                
+                panel.putClientProperty("roomData", room);
                 panel.setBackground(room.getColor());
                 panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
                 panel.setLayout(new GridBagLayout());
@@ -616,10 +625,60 @@ public class flor {
     }
 
     private void saveFile() {
-        JFileChooser fileChooser = new JFileChooser();
+        /*JFileChooser fileChooser = new JFileChooser();
         if (fileChooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
             // TODO: Implement file saving
             System.out.println("Saving: " + fileChooser.getSelectedFile().getName());
+        }*/
+        JFileChooser fileChooser = new JFileChooser();
+        int choice = fileChooser.showSaveDialog(frame);
+        if (choice == JFileChooser.APPROVE_OPTION) {
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileChooser.getSelectedFile()))) {
+                // Save all rooms on the canvasPanel
+                for (Component component : canvasPanel.getComponents()) {
+                    if (component instanceof JPanel) {
+                        JPanel roomPanel = (JPanel) component;
+                        Room room = (Room) roomPanel.getClientProperty("roomData"); // Assuming rooms are stored as client properties
+                        if (room != null) {
+                            oos.writeObject(room);
+                        }
+                    }
+                }
+                JOptionPane.showMessageDialog(frame, "File saved successfully!");
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
+    private void loadFile() {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("layout.dat"))) {
+            canvasPanel.removeAll();  // Clear the canvas
+
+            while (true) {
+                try {
+                    Rectangle bounds = (Rectangle) in.readObject(); // Read component bounds
+                    String name = (String) in.readObject();         // Read component name
+
+                    // Create a new JPanel for the component
+                    JPanel roomPanel = new JPanel();
+                    roomPanel.setBounds(bounds);
+                    roomPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+                    roomPanel.setName(name);
+                    roomPanel.setBackground(new Color(200, 200, 255)); // Example color
+                    roomPanel.add(new JLabel(name)); // Add a label to show room name
+
+                    canvasPanel.add(roomPanel);
+                } catch (EOFException e) {
+                    break; // End of file
+                }
+            }
+
+            canvasPanel.revalidate();
+            canvasPanel.repaint();
+            JOptionPane.showMessageDialog(frame, "Layout loaded successfully!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Error loading layout: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
 }
