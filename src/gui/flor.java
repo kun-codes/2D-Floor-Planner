@@ -21,8 +21,8 @@ public class flor {
     private JButton kitchenButton;
     private JButton bathroomButton;
     private JButton studyButton;
-    private JButton doorButton;
-    private JButton windowButton;
+    private JButton verticalDoorButton;
+    private JButton verticalWindowButton;
     private JButton tableButton;
     private JButton bedButton;
     private JButton sofaButton;
@@ -38,6 +38,10 @@ public class flor {
     private JCheckBox snappingCheckBox;
     private JToolBar toolBar;
     private JButton ExitButton;
+    private JLabel doorWindowSizeLabel;
+    private JTextField textField1;
+    private JButton horizontalDoorButton;
+    private JButton horizontalWindowButton;
     private JButton SaveButton;
     private JButton LoadButton;
 
