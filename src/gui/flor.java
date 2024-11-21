@@ -123,6 +123,7 @@ public class flor {
                             draggedRoom = createRoomPanel(room, width, height);
                             clickOffset = new Point(width/2, height/2);
                         }
+                        canvasPanel.setLayout(null); // setting layout again to avoid errors in gridbaglayout
                     }
                 }
             }
