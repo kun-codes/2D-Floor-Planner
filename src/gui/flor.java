@@ -26,9 +26,9 @@ public class flor {
     private JButton tableButton;
     private JButton bedButton;
     private JButton sofaButton;
-    private JButton sinkButton;
-    private JButton toiletButton;
-    private JButton ovenButton;
+    private JButton kitchenSinkButton;
+    private JButton commodeButton;
+    private JButton stoveButton;
     private JTextField heightTextField;
     private JTextField widthTextField;
     private JScrollPane scrollPane;
@@ -42,6 +42,11 @@ public class flor {
     private JTextField textField1;
     private JButton horizontalDoorButton;
     private JButton horizontalWindowButton;
+    private JButton chairButton;
+    private JButton diningSetButton;
+    private JPanel FurnitureLabel;
+    private JButton washBasinButton;
+    private JButton showerButton;
     private JButton SaveButton;
     private JButton LoadButton;
 
@@ -680,5 +685,4 @@ public class flor {
             JOptionPane.showMessageDialog(frame, "Error loading layout: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
 }
