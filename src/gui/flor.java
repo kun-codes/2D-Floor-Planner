@@ -137,6 +137,9 @@ public class flor {
                     if (isPositiveInteger(heightText) && isPositiveInteger(widthText)) {
                         int height = parseInt(heightText);
                         int width = parseInt(widthText);
+
+                        height *= 20;  // dimensions are entered in m and 1m = 20px
+                        width *= 20;  // dimensions are entered in m and 1m = 20px
                         Room room = createRoom(roomName, width, height);
                         if (room != null) {
                             draggedRoom = createRoomPanel(room, width, height);
