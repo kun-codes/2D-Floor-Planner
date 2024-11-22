@@ -39,7 +39,7 @@ public class flor {
     private JToolBar toolBar;
     private JButton ExitButton;
     private JLabel doorWindowSizeLabel;
-    private JTextField textField1;
+    private JTextField doorWindowSizeTextBox;
     private JButton horizontalDoorButton;
     private JButton horizontalWindowButton;
     private JButton chairButton;
