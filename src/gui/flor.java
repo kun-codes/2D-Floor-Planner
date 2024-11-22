@@ -12,6 +12,9 @@ import java.io.*;
 
 import static java.lang.Integer.parseInt;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class flor {
     private JPanel rootPanel;
     private JTabbedPane objectPlace;
@@ -59,6 +62,24 @@ public class flor {
     private JMenuItem newMenuItem;
     private JMenuItem openMenuItem;
     private JMenuItem saveMenuItem;
+
+    private static class RoomData {
+        String type;
+        int width;
+        int height;
+        int x;
+        int y;
+        Color color;
+        
+        RoomData(String type, int width, int height, int x, int y, Color color) {
+            this.type = type;
+            this.width = width;
+            this.height = height;
+            this.x = x;
+            this.y = y;
+            this.color = color;
+        }
+    }
 
     public flor() {
         addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
@@ -188,58 +209,6 @@ public class flor {
                         lastUpdateTime = currentTime;
                     }
                 }
-            }
-
-            private Room createRoom(String roomName, int width, int height) {
-                Point2D.Float origin = new Point2D.Float(0, 0);
-                switch(roomName) {
-                    case "Drawing Room": return new DrawingRoom(width, height, origin);
-                    case "Dining Room": return new DiningSpaceRoom(width, height, origin);
-                    case "Bedroom": return new Bedroom(width, height, origin);
-                    case "Kitchen": return new KitchenRoom(width, height, origin);
-                    case "Bathroom": return new Bathroom(width, height, origin);
-                    default: return null;
-                }
-            }
-
-            private JPanel createRoomPanel(Room room, int width, int height) {
-                JPanel panel = new JPanel() {
-                    @Override
-                    public void paintComponent(Graphics g) {
-                        super.paintComponent(g);
-                        setDoubleBuffered(true);
-                    }
-                };
-                panel.putClientProperty("roomData", room);
-                panel.setBackground(room.getColor());
-                panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
-                panel.setLayout(new GridBagLayout());
-                
-                JLabel nameLabel = new JLabel(roomName) {
-                    @Override
-                    public void paint(Graphics g) {
-                        setVisible(true); // Force label visibility
-                        super.paint(g);
-                    }
-                };
-                nameLabel.setForeground(Color.DARK_GRAY);
-                nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                
-                GridBagConstraints gbc = new GridBagConstraints();
-                gbc.gridx = 0;
-                gbc.gridy = 0;
-                gbc.weightx = 1.0;
-                gbc.weighty = 1.0;
-                gbc.fill = GridBagConstraints.BOTH;
-                
-                panel.add(nameLabel, gbc);
-                panel.setSize(width, height);
-                
-                // Force immediate layout calculation
-                panel.doLayout();
-                panel.validate();
-                
-                return panel;
             }
 
             @Override
@@ -621,44 +590,161 @@ public class flor {
     }
 
     private void newFile() {
-        // TODO: Implement new file functionality
-        System.out.println("New file");
+        // Check if there are rooms to save
+        boolean hasRooms = false;
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && comp != canvasPanel) {
+                hasRooms = true;
+                break;
+            }
+        }
+        
+        if (hasRooms) {
+            int response = JOptionPane.showConfirmDialog(
+                frame,
+                "Do you want to save the current floor plan?",
+                "Save Changes",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (response == JOptionPane.YES_OPTION) {
+                return; // Do nothing, let user save manually
+            } else if (response == JOptionPane.NO_OPTION) {
+                // Clear all rooms
+                Component[] components = canvasPanel.getComponents();
+                for (Component comp : components) {
+                    if (comp instanceof JPanel && comp != canvasPanel) {
+                        canvasPanel.remove(comp);
+                    }
+                }
+                canvasPanel.revalidate();
+                canvasPanel.repaint();
+            }
+            // If CANCEL, do nothing
+        }
     }
 
     private void openFile() {
         JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Floor Plan Files (*.flp)", "flp"
+        ));
+        
         if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
-            // TODO: Implement file opening
-            System.out.println("Opening: " + fileChooser.getSelectedFile().getName());
+            // Clear existing rooms
+            Component[] components = canvasPanel.getComponents();
+            for (Component comp : components) {
+                if (comp instanceof JPanel && comp != canvasPanel) {
+                    canvasPanel.remove(comp);
+                }
+            }
+            canvasPanel.repaint();
+            
+            try (BufferedReader reader = new BufferedReader(new FileReader(fileChooser.getSelectedFile()))) {
+                String line;
+                // Skip header lines
+                reader.readLine(); // Skip "# Floor Plan Layout File"
+                reader.readLine(); // Skip format description
+                
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",");
+                    if (parts.length == 8) {
+                        String roomType = parts[0];
+                        int width = Integer.parseInt(parts[1]);
+                        int height = Integer.parseInt(parts[2]);
+                        int x = Integer.parseInt(parts[3]);
+                        int y = Integer.parseInt(parts[4]);
+                        Color color = new Color(
+                            Integer.parseInt(parts[5]),
+                            Integer.parseInt(parts[6]),
+                            Integer.parseInt(parts[7])
+                        );
+                        
+                        // Create room
+                        Room room = createRoom(roomType, width, height);
+                        if (room != null) {
+                            canvasPanel.setLayout(null); // setting layout again to avoid errors in gridbaglayout
+                            JPanel roomPanel = createRoomPanel(room, width, height);
+                            roomPanel.setLocation(x, y);
+                            canvasPanel.add(roomPanel);
+                            addDragAndDropToRoom(roomPanel);
+                        }
+                    }
+                }
+                
+                canvasPanel.revalidate();
+                canvasPanel.repaint();
+                
+                JOptionPane.showMessageDialog(frame,
+                    "Floor plan loaded successfully!",
+                    "Load Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+                    
+            } catch (IOException | NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame,
+                    "Error loading file: " + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
     private void saveFile() {
-        /*JFileChooser fileChooser = new JFileChooser();
-        if (fileChooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
-            // TODO: Implement file saving
-            System.out.println("Saving: " + fileChooser.getSelectedFile().getName());
-        }*/
         JFileChooser fileChooser = new JFileChooser();
-        int choice = fileChooser.showSaveDialog(frame);
-        if (choice == JFileChooser.APPROVE_OPTION) {
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(fileChooser.getSelectedFile()))) {
-                // Save all rooms on the canvasPanel
-                for (Component component : canvasPanel.getComponents()) {
-                    if (component instanceof JPanel) {
-                        JPanel roomPanel = (JPanel) component;
-                        Room room = (Room) roomPanel.getClientProperty("roomData"); // Assuming rooms are stored as client properties
-                        if (room != null) {
-                            oos.writeObject(room);
-                        }
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Floor Plan Files (*.flp)", "flp"
+        ));
+        
+        if (fileChooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".flp")) {
+                file = new File(file.getParentFile(), file.getName() + ".flp");
+            }
+            
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                // Write header
+                writer.write("# Floor Plan Layout File");
+                writer.newLine();
+                writer.write("# Format: RoomType,Width,Height,X,Y,ColorR,ColorG,ColorB");
+                writer.newLine();
+                
+                // Write each room's data
+                for (Component comp : canvasPanel.getComponents()) {
+                    if (comp instanceof JPanel && comp != canvasPanel) {
+                        JPanel roomPanel = (JPanel) comp;
+                        JLabel nameLabel = (JLabel) roomPanel.getComponent(0);
+                        Color color = roomPanel.getBackground();
+                        
+                        String roomData = String.format("%s,%d,%d,%d,%d,%d,%d,%d",
+                            nameLabel.getText(),
+                            roomPanel.getWidth(),
+                            roomPanel.getHeight(),
+                            roomPanel.getX(),
+                            roomPanel.getY(),
+                            color.getRed(),
+                            color.getGreen(),
+                            color.getBlue()
+                        );
+                        writer.write(roomData);
+                        writer.newLine();
                     }
                 }
-                JOptionPane.showMessageDialog(frame, "File saved successfully!");
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Error saving file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                
+                JOptionPane.showMessageDialog(frame,
+                    "Floor plan saved successfully!",
+                    "Save Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+                    
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(frame,
+                    "Error saving file: " + ex.getMessage(),
+                    "Save Error",
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }
+
     private void loadFile() {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("layout.dat"))) {
             canvasPanel.removeAll();  // Clear the canvas
@@ -687,5 +773,49 @@ public class flor {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(frame, "Error loading layout: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private Room createRoom(String roomName, int width, int height) {
+        Point2D.Float origin = new Point2D.Float(0, 0);
+        switch(roomName) {
+            case "Drawing Room": return new DrawingRoom(width, height, origin);
+            case "Dining Room": return new DiningSpaceRoom(width, height, origin);
+            case "Bedroom": return new Bedroom(width, height, origin);
+            case "Kitchen": return new KitchenRoom(width, height, origin);
+            case "Bathroom": return new Bathroom(width, height, origin);
+            default: return null;
+        }
+    }
+
+    private JPanel createRoomPanel(Room room, int width, int height) {
+        // Create panel with null layout
+        JPanel panel = new JPanel(null);
+        panel.setBackground(room.getColor());
+        panel.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+        panel.setSize(width, height);
+        
+        // Get room name
+        String roomName = room.getClass().getSimpleName().replace("Room", "");
+        if (roomName.equals("Drawing")) {
+            roomName = "Drawing Room";
+        } else if (roomName.equals("DiningSpace")) {
+            roomName = "Dining Room";
+        }
+        
+        // Create and position label
+        JLabel nameLabel = new JLabel(roomName);
+        nameLabel.setForeground(Color.DARK_GRAY);
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        // Center label in panel
+        int labelWidth = width - 10; // Padding
+        int labelHeight = 20;        // Fixed height
+        int x = 5;                   // Left padding
+        int y = (height - labelHeight) / 2; // Vertical center
+        nameLabel.setBounds(x, y, labelWidth, labelHeight);
+        
+        panel.add(nameLabel);
+        
+        return panel;
     }
 }
