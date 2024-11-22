@@ -40,7 +40,6 @@ public class flor {
     private JLabel snappingLabel;
     private JCheckBox snappingCheckBox;
     private JToolBar toolBar;
-    private JButton ExitButton;
     private JLabel doorWindowSizeLabel;
     private JTextField doorWindowSizeTextBox;
     private JButton horizontalDoorButton;
@@ -131,17 +130,7 @@ public class flor {
 
         // Add menu bar to toolbar
         toolBar.add(menuBar);
-        /*toolBar.add(saveButton);
-        toolBar.add(loadButton);*/
         rootPanel.add(toolBar, BorderLayout.NORTH);
-        /*ExitButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                System.exit(0);
-            }
-        });*/
-        // Add ExitButton functionality
-        ExitButton.addActionListener(e -> System.exit(0));
     }
 
     // Adds action listener to room creation buttons to handle room placement and sizing
