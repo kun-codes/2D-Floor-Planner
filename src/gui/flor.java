@@ -117,6 +117,15 @@ public class flor {
         fileMenu.add(openMenuItem);
         fileMenu.add(saveMenuItem);
 
+        // Create exit menu item
+        JMenuItem exitMenuItem = new JMenuItem("Exit", KeyEvent.VK_Q);
+        exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
+        exitMenuItem.addActionListener(e -> exitApplication());
+
+        // Add separator and exit item to File menu
+        fileMenu.addSeparator();
+        fileMenu.add(exitMenuItem);
+
         // Add File menu to menu bar
         menuBar.add(fileMenu);
 
@@ -817,5 +826,34 @@ public class flor {
         panel.add(nameLabel);
         
         return panel;
+    }
+
+    // Add exit handler method
+    private void exitApplication() {
+        // Check if there are rooms
+        boolean hasRooms = false;
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && comp != canvasPanel) {
+                hasRooms = true;
+                break;
+            }
+        }
+        
+        if (hasRooms) {
+            int response = JOptionPane.showConfirmDialog(
+                frame,
+                "Do you want to save the existing floor plan?",
+                "Save before exit",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+            );
+            
+            if (response == JOptionPane.NO_OPTION) {
+                System.exit(0);
+            }
+            // If YES, do nothing - let user save manually
+        } else {
+            System.exit(0);
+        }
     }
 }
