@@ -30,4 +30,8 @@ public abstract class Opening {
     public boolean checkOverlap() {
         throw new UnsupportedOperationException("Not implemented yet");
     }
+
+    public boolean isDoor() {
+        return this instanceof Door;
+    }
 }

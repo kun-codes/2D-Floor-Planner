@@ -6,6 +6,10 @@ import javax.swing.BorderFactory;
 import java.awt.geom.Point2D;
 import model.rooms.*;
 
+import model.opening.Opening;
+import model.opening.Door;
+import model.opening.Window;
+
 import java.awt.GraphicsEnvironment;
 import java.awt.event.ActionEvent;
 import java.io.*;
@@ -79,6 +83,92 @@ public class flor {
             this.color = color;
         }
     }
+    private class OpeningPanel extends JPanel {
+        protected final Opening opening;
+        protected final int size;
+        protected final boolean isVertical;
+        private static final int ADJACENT_DOOR_THICKNESS = 4;
+        private static final int EXTERIOR_DOOR_THICKNESS = 2;
+        private static final int WINDOW_THICKNESS = 2;
+    
+        public OpeningPanel(Opening opening, int size, boolean isVertical) {
+            this.opening = opening;
+            this.size = size;
+            this.isVertical = isVertical;
+            setOpaque(true);
+            setBackground(Color.WHITE);
+            updateThickness();
+        }
+    
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            
+            if (!opening.isDoor()) {
+                // Draw dashed line for windows
+                Graphics2D g2d = (Graphics2D) g;
+                float[] dash = {5.0f};
+                g2d.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_BUTT, 
+                    BasicStroke.JOIN_MITER, 10.0f, dash, 0.0f));
+                g2d.setColor(Color.BLACK);
+                
+                if (isVertical) {
+                    int centerX = getWidth() / 2;
+                    g2d.drawLine(centerX, 0, centerX, getHeight());
+                } else {
+                    int centerY = getHeight() / 2;
+                    g2d.drawLine(0, centerY, getWidth(), centerY);
+                }
+            }
+        }
+    
+        public void updateThickness() {
+            int thickness;
+            if (opening.isDoor()) {
+                Point center = new Point(
+                    getX() + getWidth()/2,
+                    getY() + getHeight()/2
+                );
+                thickness = isWallAdjacent(center, isVertical) ? 
+                    ADJACENT_DOOR_THICKNESS : EXTERIOR_DOOR_THICKNESS;
+    
+                // Update door color to match room
+                updateOpeningColor(center);
+            } else {
+                thickness = WINDOW_THICKNESS;
+                // Update window color to match room
+                Point center = new Point(
+                    getX() + getWidth()/2,
+                    getY() + getHeight()/2
+                );
+                updateOpeningColor(center);
+            }
+            setSize(isVertical ? thickness : size, isVertical ? size : thickness);
+        }
+    
+        private void updateOpeningColor(Point center) {
+            for (Component comp : canvasPanel.getComponents()) {
+                if (comp instanceof JPanel && !(comp instanceof OpeningPanel)) {
+                    Rectangle bounds = comp.getBounds();
+                    if (isVertical) {
+                        if (center.y >= bounds.y && center.y <= bounds.y + bounds.height &&
+                            (Math.abs(center.x - bounds.x) < SNAP_THRESHOLD ||
+                             Math.abs(center.x - (bounds.x + bounds.width)) < SNAP_THRESHOLD)) {
+                            setBackground(comp.getBackground());
+                            break;
+                        }
+                    } else {
+                        if (center.x >= bounds.x && center.x <= bounds.x + bounds.width &&
+                            (Math.abs(center.y - bounds.y) < SNAP_THRESHOLD ||
+                             Math.abs(center.y - (bounds.y + bounds.height)) < SNAP_THRESHOLD)) {
+                            setBackground(comp.getBackground());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     public flor() {
         addRoomButtonActionListener(drawingRoomButton, "Drawing Room");
@@ -131,6 +221,12 @@ public class flor {
         // Add menu bar to toolbar
         toolBar.add(menuBar);
         rootPanel.add(toolBar, BorderLayout.NORTH);
+
+        // Add to constructor
+        addOpeningButtonListener(verticalDoorButton, true, true);
+        addOpeningButtonListener(horizontalDoorButton, true, false);
+        addOpeningButtonListener(verticalWindowButton, false, true);
+        addOpeningButtonListener(horizontalWindowButton, false, false);
     }
 
     // Adds action listener to room creation buttons to handle room placement and sizing
@@ -815,6 +911,297 @@ public class flor {
         panel.add(nameLabel);
         
         return panel;
+    }
+
+    // Add button listener method
+    private void addOpeningButtonListener(JButton button, boolean isDoor, boolean isVertical) {
+        MouseAdapter openingDragAdapter = new MouseAdapter() {
+            private OpeningPanel draggedOpening = null;
+            private Point clickOffset;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    String sizeText = doorWindowSizeTextBox.getText();
+                    if (!isPositiveInteger(sizeText)) {
+                        JOptionPane.showMessageDialog(canvasPanel,
+                            "Please enter valid opening size",
+                            "Invalid Size",
+                            JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    
+                    int size = parseInt(sizeText) * 20; // Convert to pixels
+                    Point2D.Float position = new Point2D.Float(0, 0);
+                    String orientation = isVertical ? "0" : "90";
+                    
+                    Opening opening = isDoor ? 
+                        new Door(position, orientation) : 
+                        new Window(position, orientation);
+                        
+                    draggedOpening = new OpeningPanel(opening, size, isVertical);
+                    clickOffset = new Point(draggedOpening.getWidth()/2, draggedOpening.getHeight()/2);
+                }
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (draggedOpening != null) {
+                    Point canvasPoint = SwingUtilities.convertPoint(
+                        button,
+                        e.getPoint(),
+                        canvasPanel
+                    );
+                    
+                    Point snapPoint = findNearestWall(canvasPoint, draggedOpening);
+                    if (snapPoint != null) {
+                        if (!canvasPanel.isAncestorOf(draggedOpening)) {
+                            canvasPanel.add(draggedOpening);
+                            canvasPanel.setComponentZOrder(draggedOpening, 0); // Set to top layer
+                        }
+                        draggedOpening.setLocation(
+                            snapPoint.x - clickOffset.x,
+                            snapPoint.y - clickOffset.y
+                        );
+                        draggedOpening.updateThickness();
+                    }
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (draggedOpening != null) {
+                    if (!isValidOpeningPlacement(draggedOpening)) {
+                        canvasPanel.remove(draggedOpening);
+                        JOptionPane.showMessageDialog(canvasPanel,
+                            "Invalid opening placement",
+                            "Placement Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+                    canvasPanel.repaint();
+                }
+                draggedOpening = null;
+            }
+        };
+
+        button.addMouseListener(openingDragAdapter);
+        button.addMouseMotionListener(openingDragAdapter);
+    }
+
+    // Add helper methods
+    private Point findNearestWall(Point p, OpeningPanel opening) {
+        int minDistance = Integer.MAX_VALUE;
+        Point bestPoint = null;
+        
+        // If it's a window, don't allow placement between rooms
+        if (!opening.opening.isDoor()) {
+            if (isWindowBetweenRooms(p, opening)) {
+                return null;
+            }
+        }
+        
+        // Rest of existing findNearestWall code...
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && !(comp instanceof OpeningPanel)) {
+                Rectangle bounds = comp.getBounds();
+                
+                if (opening.isVertical) {
+                    // Left wall
+                    if (Math.abs(p.x - bounds.x) < SNAP_THRESHOLD) {
+                        int dist = Math.abs(p.y - bounds.y);
+                        if (dist < minDistance && opening.size <= bounds.height) {
+                            minDistance = dist;
+                            bestPoint = new Point(bounds.x + 1, p.y); // Offset by 1px
+                        }
+                    }
+                    // Right wall
+                    if (Math.abs(p.x - (bounds.x + bounds.width)) < SNAP_THRESHOLD) {
+                        int dist = Math.abs(p.y - bounds.y);
+                        if (dist < minDistance && opening.size <= bounds.height) {
+                            minDistance = dist;
+                            bestPoint = new Point(bounds.x + bounds.width - 1, p.y); // Offset by 1px
+                        }
+                    }
+                } else {
+                    // Top wall
+                    if (Math.abs(p.y - bounds.y) < SNAP_THRESHOLD) {
+                        int dist = Math.abs(p.x - bounds.x);
+                        if (dist < minDistance && opening.size <= bounds.width) {
+                            minDistance = dist;
+                            bestPoint = new Point(p.x, bounds.y + 1); // Offset by 1px
+                        }
+                    }
+                    // Bottom wall
+                    if (Math.abs(p.y - (bounds.y + bounds.height)) < SNAP_THRESHOLD) {
+                        int dist = Math.abs(p.x - bounds.x);
+                        if (dist < minDistance && opening.size <= bounds.width) {
+                            minDistance = dist;
+                            bestPoint = new Point(p.x, bounds.y + bounds.height - 1); // Offset by 1px
+                        }
+                    }
+                }
+            }
+        }
+        
+        return bestPoint;
+    }
+
+    // Add method to check if window is between rooms
+    private boolean isWindowBetweenRooms(Point location, OpeningPanel opening) {
+        // Find all rooms that have walls near the opening
+        List<Rectangle> adjacentRooms = new ArrayList<>();
+        
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && !(comp instanceof OpeningPanel)) {
+                Rectangle bounds = comp.getBounds();
+                
+                if (opening.isVertical) {
+                    // Check if opening is near vertical walls
+                    if (Math.abs(location.x - bounds.x) < SNAP_THRESHOLD ||
+                        Math.abs(location.x - (bounds.x + bounds.width)) < SNAP_THRESHOLD) {
+                        adjacentRooms.add(bounds);
+                    }
+                } else {
+                    // Check if opening is near horizontal walls
+                    if (Math.abs(location.y - bounds.y) < SNAP_THRESHOLD ||
+                        Math.abs(location.y - (bounds.y + bounds.height)) < SNAP_THRESHOLD) {
+                        adjacentRooms.add(bounds);
+                    }
+                }
+            }
+        }
+        
+        // If we found more than one room, check if their walls are adjacent
+        if (adjacentRooms.size() > 1) {
+            for (int i = 0; i < adjacentRooms.size(); i++) {
+                for (int j = i + 1; j < adjacentRooms.size(); j++) {
+                    if (areWallsAdjacent(adjacentRooms.get(i), adjacentRooms.get(j), opening.isVertical)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    private boolean areWallsAdjacent(Rectangle room1, Rectangle room2, boolean isVertical) {
+        if (isVertical) {
+            // Check if rooms share a vertical wall
+            boolean rightToLeft = Math.abs((room1.x + room1.width) - room2.x) < SNAP_THRESHOLD;
+            boolean leftToRight = Math.abs(room1.x - (room2.x + room2.width)) < SNAP_THRESHOLD;
+            
+            if (rightToLeft || leftToRight) {
+                // Check if rooms overlap vertically
+                int overlapStart = Math.max(room1.y, room2.y);
+                int overlapEnd = Math.min(room1.y + room1.height, room2.y + room2.height);
+                return overlapEnd > overlapStart;
+            }
+        } else {
+            // Check if rooms share a horizontal wall
+            boolean topToBottom = Math.abs((room1.y + room1.height) - room2.y) < SNAP_THRESHOLD;
+            boolean bottomToTop = Math.abs(room1.y - (room2.y + room2.height)) < SNAP_THRESHOLD;
+            
+            if (topToBottom || bottomToTop) {
+                // Check if rooms overlap horizontally
+                int overlapStart = Math.max(room1.x, room2.x);
+                int overlapEnd = Math.min(room1.x + room1.width, room2.x + room2.width);
+                return overlapEnd > overlapStart;
+            }
+        }
+        
+        return false;
+    }
+
+    private boolean isValidOpeningPlacement(OpeningPanel opening) {
+        // First check for overlaps with other openings
+        if (hasOpeningOverlap(opening)) {
+            return false;
+        }
+        
+        // Check if opening is on a wall
+        Point center = new Point(
+            opening.getX() + opening.getWidth()/2,
+            opening.getY() + opening.getHeight()/2
+        );
+        
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && !(comp instanceof OpeningPanel)) {
+                Rectangle bounds = comp.getBounds();
+                if (opening.isVertical) {
+                    // Check vertical walls (left and right)
+                    if (Math.abs(center.x - bounds.x) < SNAP_THRESHOLD ||
+                        Math.abs(center.x - (bounds.x + bounds.width)) < SNAP_THRESHOLD) {
+                        return true;
+                    }
+                } else {
+                    // Check horizontal walls (top and bottom)
+                    if (Math.abs(center.y - bounds.y) < SNAP_THRESHOLD ||
+                        Math.abs(center.y - (bounds.y + bounds.height)) < SNAP_THRESHOLD) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean hasOpeningOverlap(OpeningPanel newOpening) {
+        Rectangle newBounds = newOpening.getBounds();
+        
+        // Check against all existing openings
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof OpeningPanel && comp != newOpening) {
+                OpeningPanel existingOpening = (OpeningPanel) comp;
+                Rectangle existingBounds = existingOpening.getBounds();
+                
+                // Check if openings intersect
+                if (newBounds.intersects(existingBounds)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isWallAdjacent(Point wallPoint, boolean isVertical) {
+        boolean hasRoomOnFirstSide = false;
+        boolean hasRoomOnSecondSide = false;
+        
+        for (Component comp : canvasPanel.getComponents()) {
+            if (comp instanceof JPanel && !(comp instanceof OpeningPanel)) {
+                Rectangle bounds = comp.getBounds();
+                
+                if (isVertical) {
+                    // Check if point is within vertical range of the room
+                    if (wallPoint.y >= bounds.y && wallPoint.y <= bounds.y + bounds.height) {
+                        // Check left side
+                        if (Math.abs(wallPoint.x - bounds.x) < SNAP_THRESHOLD) {
+                            hasRoomOnFirstSide = true;
+                        }
+                        // Check right side
+                        if (Math.abs(wallPoint.x - (bounds.x + bounds.width)) < SNAP_THRESHOLD) {
+                            hasRoomOnSecondSide = true;
+                        }
+                    }
+                } else {
+                    // Check if point is within horizontal range of the room
+                    if (wallPoint.x >= bounds.x && wallPoint.x <= bounds.x + bounds.width) {
+                        // Check top side
+                        if (Math.abs(wallPoint.y - bounds.y) < SNAP_THRESHOLD) {
+                            hasRoomOnFirstSide = true;
+                        }
+                        // Check bottom side
+                        if (Math.abs(wallPoint.y - (bounds.y + bounds.height)) < SNAP_THRESHOLD) {
+                            hasRoomOnSecondSide = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Return true if wall is interior (has rooms on both sides)
+        return hasRoomOnFirstSide && hasRoomOnSecondSide;
     }
 
     // Add exit handler method
