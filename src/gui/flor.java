@@ -88,6 +88,11 @@ public class flor {
         addRoomButtonActionListener(bathroomButton, "Bathroom");
         addRoomButtonActionListener(studyButton, "Study");
 
+        addWindowOrDoor(verticalDoorButton, false, false); // Vertical door
+        addWindowOrDoor(horizontalDoorButton, false, true); // Horizontal door
+        addWindowOrDoor(verticalWindowButton, true, false); // Vertical window
+        addWindowOrDoor(horizontalWindowButton, true, true); // Horizontal window
+
         scrollPane.setViewportView(canvasPanel);
 
         // Create menu bar
@@ -118,7 +123,7 @@ public class flor {
 
         // Create exit menu item
         JMenuItem exitMenuItem = new JMenuItem("Exit", KeyEvent.VK_Q);
-        exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, ActionEvent.CTRL_MASK));
+        exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_MASK));
         exitMenuItem.addActionListener(e -> exitApplication());
 
         // Add separator and exit item to File menu
@@ -245,6 +250,123 @@ public class flor {
         button.addMouseListener(buttonDragAdapter);
         button.addMouseMotionListener(buttonDragAdapter);
     }
+
+    private static final int DEFAULT_DOOR_WINDOW_WIDTH = 10;
+    private static final int DEFAULT_DOOR_WINDOW_HEIGHT = 50;
+
+    private void addWindowOrDoor(JButton button, boolean isWindow, boolean isHorizontal) {
+        MouseAdapter adapter = new MouseAdapter() {
+            private JPanel draggedComponent = null;
+            private Point clickOffset;
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    // Create the door or window panel
+                    draggedComponent = new JPanel() {
+                        @Override
+                        protected void paintComponent(Graphics g) {
+                            super.paintComponent(g);
+                            g.setColor(Color.WHITE); // Make it appear as part of the wall
+                            g.fillRect(0, 0, getWidth(), getHeight());
+                        }
+                    };
+                    draggedComponent.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+                    draggedComponent.setSize(
+                            isHorizontal ? DEFAULT_DOOR_WINDOW_WIDTH * 5 : DEFAULT_DOOR_WINDOW_WIDTH,
+                            isHorizontal ? DEFAULT_DOOR_WINDOW_HEIGHT : DEFAULT_DOOR_WINDOW_HEIGHT * 5
+                    );
+                    canvasPanel.setLayout(null); // Ensure absolute positioning
+                    clickOffset = e.getPoint();
+                }
+            }
+
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && draggedComponent != null) {
+                    Point canvasPoint = SwingUtilities.convertPoint(
+                            button,
+                            e.getPoint(),
+                            canvasPanel
+                    );
+
+                    int x = canvasPoint.x - clickOffset.x;
+                    int y = canvasPoint.y - clickOffset.y;
+
+                    // Constrain position within canvas bounds
+                    x = Math.max(0, Math.min(x, canvasPanel.getWidth() - draggedComponent.getWidth()));
+                    y = Math.max(0, Math.min(y, canvasPanel.getHeight() - draggedComponent.getHeight()));
+
+                    draggedComponent.setLocation(x, y);
+
+                    if (!canvasPanel.isAncestorOf(draggedComponent)) {
+                        canvasPanel.add(draggedComponent);
+                    }
+                    canvasPanel.repaint();
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && draggedComponent != null) {
+                    // Check if it's dropped on a room
+                    Component targetRoom = findRoomUnderComponent(draggedComponent);
+                    if (targetRoom != null) {
+                        // Align the door/window with the room's wall
+                        alignWithRoomWall(targetRoom, draggedComponent, isHorizontal);
+                    } else {
+                        // Remove if not dropped on a valid room
+                        canvasPanel.remove(draggedComponent);
+                    }
+                    draggedComponent = null;
+                    canvasPanel.repaint();
+                }
+            }
+        };
+
+        button.addMouseListener(adapter);
+        button.addMouseMotionListener(adapter);
+    }
+
+    // Helper to find the room under the door/window
+    private Component findRoomUnderComponent(JPanel component) {
+        Rectangle bounds = component.getBounds();
+        for (Component c : canvasPanel.getComponents()) {
+            if (c instanceof JPanel && !(c instanceof CanvasPanel) && c.getBounds().intersects(bounds)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    // Align door/window with the room's wall
+    private void alignWithRoomWall(Component room, JPanel doorOrWindow, boolean isHorizontal) {
+        Rectangle roomBounds = room.getBounds();
+        Rectangle dwBounds = doorOrWindow.getBounds();
+
+        if (isHorizontal) {
+            // Align horizontally
+            if (Math.abs(dwBounds.y - roomBounds.y) < SNAP_THRESHOLD) {
+                dwBounds.y = roomBounds.y; // Top wall
+            } else if (Math.abs(dwBounds.y + dwBounds.height - roomBounds.y - roomBounds.height) < SNAP_THRESHOLD) {
+                dwBounds.y = roomBounds.y + roomBounds.height - dwBounds.height; // Bottom wall
+            }
+        } else {
+            // Align vertically
+            if (Math.abs(dwBounds.x - roomBounds.x) < SNAP_THRESHOLD) {
+                dwBounds.x = roomBounds.x; // Left wall
+            } else if (Math.abs(dwBounds.x + dwBounds.width - roomBounds.x - roomBounds.width) < SNAP_THRESHOLD) {
+                dwBounds.x = roomBounds.x + roomBounds.width - dwBounds.width; // Right wall
+            }
+        }
+
+        // Ensure alignment within room bounds
+        dwBounds.x = Math.max(roomBounds.x, Math.min(dwBounds.x, roomBounds.x + roomBounds.width - dwBounds.width));
+        dwBounds.y = Math.max(roomBounds.y, Math.min(dwBounds.y, roomBounds.y + roomBounds.height - dwBounds.height));
+
+        doorOrWindow.setBounds(dwBounds);
+    }
+
 
     private boolean isPositiveInteger(String text) {
         try {
@@ -785,6 +907,7 @@ public class flor {
         }
     }
 
+
     private JPanel createRoomPanel(Room room, int width, int height) {
         // Create panel with null layout
         JPanel panel = new JPanel(null);
@@ -845,4 +968,6 @@ public class flor {
             System.exit(0);
         }
     }
+
+
 }
